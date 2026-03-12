@@ -135,6 +135,43 @@ Guide the user to obtain an API Token:
 
 **Security warning**: Remind the user that the token carries account-level permissions. It should never be leaked or committed to a code repository. Once obtained, the token is used directly in the deploy command (see Step 4).
 
+### Step 3c: Offer to Save Token Locally (Token Login only)
+
+After the user provides their token, **ask the user whether they want to save the token locally** for future deployments, so they don't have to enter it every time.
+
+Use the IDE's selection control (`ask_followup_question`) to prompt:
+
+> Would you like to save this token locally for future deployments?
+> - **Yes** — Save to `.edgeone/.token` in the project root (will be auto-used in future deploys)
+> - **No** — Use the token for this deployment only
+
+**If the user chooses Yes:**
+
+1. Create the `.edgeone/` directory in the project root if it doesn't exist:
+
+```bash
+mkdir -p .edgeone
+```
+
+2. Save the token to `.edgeone/.token`:
+
+```bash
+echo "<token>" > .edgeone/.token
+```
+
+3. Ensure `.edgeone/.token` is in `.gitignore` to prevent accidental commits:
+
+```bash
+# Check if .gitignore already contains the entry
+grep -q '.edgeone/.token' .gitignore 2>/dev/null || echo '.edgeone/.token' >> .gitignore
+```
+
+4. Inform the user:
+> ✅ Token saved to `.edgeone/.token`. It will be automatically used for future deployments.
+> The file has been added to `.gitignore` to prevent accidental commits.
+
+**If the user chooses No:** Proceed directly to Step 4 with the token.
+
 ---
 
 ## Step 4: Deploy
@@ -161,6 +198,15 @@ edgeone pages deploy -n <project-name>
 
 ### Scenario 2: Token-based deployment
 
+**Before asking the user for a token, check if a saved token exists locally:**
+
+```bash
+cat .edgeone/.token 2>/dev/null
+```
+
+- If a saved token is found → use it automatically and inform the user: "Using saved token from `.edgeone/.token`"
+- If no saved token exists → ask the user to provide a token (as described in Step 3, Method 2)
+
 Token deployment does not require running `edgeone login` beforehand. Pass the token directly in the deploy command:
 
 ```bash
@@ -172,6 +218,8 @@ edgeone pages deploy -n <project-name> -t <token>
 ```
 
 > **Note**: The token is already bound to a specific site (China or Global), so there is no need to specify `--site` when deploying with a token.
+
+After a successful token-based deployment, if the token was entered manually (not loaded from `.edgeone/.token`), proceed to **Step 3c** to offer saving it for next time.
 
 ### Deployment Environment
 
@@ -296,6 +344,8 @@ Follow the prompts to enter an existing Pages project name. If the project does 
 | Unsure whether to choose China or Global | Mainland China users → China; users outside China → Global |
 | Where to get an API Token | China: console.cloud.tencent.com/edgeone/pages?tab=settings; Global: console.intl.cloud.tencent.com/edgeone/pages?tab=settings |
 | Token deployment fails with auth error | Verify the token is correct and has not expired; regenerate if needed |
+| How to update a saved token | Delete `.edgeone/.token` and deploy again — the agent will prompt you to enter and save a new token |
+| Where is the token stored | In `.edgeone/.token` in the project root; this file is auto-added to `.gitignore` |
 
 ---
 
